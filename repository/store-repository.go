@@ -10,6 +10,8 @@ import (
 type StoreRepository interface {
 	CreateStore(store entity.Store) (entity.Store, error)
     FindByID(id string) (entity.Store, error)
+    FindByUserID(userID int) (entity.Store, error) 
+    FindAll() ([]entity.Store, error)  
     Update(store entity.Store) (entity.Store, error)
 }
 
@@ -21,6 +23,27 @@ func NewStoreRepository(db *gorm.DB) StoreRepository {
 	return &storeRepository{
 		db: db,
 	}
+}
+
+
+func (r *storeRepository) FindByUserID(userID int) (entity.Store, error) {
+    var store entity.Store
+    err := r.db.Where("user_id = ?", userID).First(&store).Error
+    
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return store, errors.New("store not found for this user")
+        }
+        return store, err
+    }
+    
+    return store, nil
+}
+
+func (r *storeRepository) FindAll() ([]entity.Store, error) {
+    var stores []entity.Store
+    err := r.db.Find(&stores).Error
+    return stores, err
 }
 
 func (r *storeRepository) CreateStore(store entity.Store) (entity.Store, error) {

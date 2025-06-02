@@ -14,10 +14,10 @@ import (
 )
 
 type ProductService interface {
+	GetAllProductByStore(storeID, page, limit int, search string) ([]entity.Product, *utils.Pagination, error)
 	CreateProduct(c *gin.Context, productDTO dto.CreateProductDTO, files []*multipart.FileHeader) (entity.Product, error)
 	GetProductByID(id int) (entity.Product, error)
 	GetProductBySlug(slug string) (entity.Product, error)
-	GetProductsByStoreID(storeID int) ([]entity.Product, error)
 	UpdateProduct(c *gin.Context, slug string, productDTO dto.UpdateProductDTO) (entity.Product, error)
 	DeleteProduct(slug string) error
 	AddProductImage(c *gin.Context, slug string, file *multipart.FileHeader) (entity.ProductImage, error)
@@ -34,6 +34,27 @@ func NewProductService(productRepo repository.ProductRepository, productImageRep
 		productRepo:      productRepo,
 		productImageRepo: productImageRepo,
 	}
+}
+
+func (s *productService) GetAllProductByStore(storeID, page, limit int, search string) ([]entity.Product, *utils.Pagination, error) {
+	// Validasi pagination parameters
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 50 {
+		limit = 12
+	}
+	
+	// Get products dengan pagination
+	products, total, err := s.productRepo.GetAllProductByStore(storeID, page, limit, search)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	// Create pagination data
+	pagination := utils.NewPagination(page, limit, total)
+	
+	return products, pagination, nil
 }
 
 func (s *productService) CreateProduct(c *gin.Context, productDTO dto.CreateProductDTO, files []*multipart.FileHeader) (entity.Product, error) {
@@ -53,6 +74,7 @@ func (s *productService) CreateProduct(c *gin.Context, productDTO dto.CreateProd
 		Description: productDTO.Description,
 		Harga:       productDTO.Harga,
 		StoreID:     productDTO.StoreID,
+		CategoryID:  productDTO.CategoryID,
 	}
 	
 	// Upload gambar pertama sebagai thumbnail
@@ -127,9 +149,6 @@ func (s *productService) GetProductBySlug(slug string) (entity.Product, error) {
 	return s.productRepo.FindBySlug(slug)
 }
 
-func (s *productService) GetProductsByStoreID(storeID int) ([]entity.Product, error) {
-	return s.productRepo.FindByStoreID(storeID)
-}
 
 func (s *productService) UpdateProduct(c *gin.Context, slug string, productDTO dto.UpdateProductDTO) (entity.Product, error) {
 	// Cari produk berdasarkan slug

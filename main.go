@@ -79,6 +79,47 @@ func main() {
 	// 	articleRoutes.GET("/getArticleWithKey/:title", articleController.GetArticleByKey)
 	// }
 
+	userRoutes := r.Group("api") 
+	{
+		protected := userRoutes.Group("", middleware.AuthorizeJWT(jwtService))
+		{
+			protected.GET("/all-users", userController.GetAllUser)
+		}
+	}
+
+	storeAuth := r.Group("api")
+	{
+		storeAuth.GET("/stores", storeController.GetAllStores)                   
+		storeAuth.GET("/store/user/:user_id", storeController.GetStoreByUserID)
+
+				// Protected routes (require JWT authentication)
+		protected := storeAuth.Group("", middleware.AuthorizeJWT(jwtService))
+		{
+			// Store
+			protected.POST("/store", storeController.CreateStore)
+			protected.PUT("/store/:id", storeController.UpdateStore)
+		}
+	}
+
+	productRoutes := r.Group("api") 
+	{
+				// Product
+		productRoutes.GET("/store/:id/products", productController.GetProductsByStoreIDPublic)
+		productRoutes.GET("/product/:slug", productController.GetProductBySlug)
+
+		protected := productRoutes.Group("", middleware.AuthorizeJWT(jwtService))
+		{
+			// Product (dashboard)
+			protected.POST("/product", productController.CreateProduct)
+			protected.GET("/product/detail/:slug", productController.GetProductBySlug)
+			protected.GET("/my-store/:id/products", productController.GetProductsByStoreID)
+			protected.PUT("/product/:slug", productController.UpdateProduct)
+			protected.DELETE("/product/:slug", productController.DeleteProduct)
+			protected.POST("/product/image", productController.AddProductImage)
+			protected.DELETE("/product/image/:id", productController.DeleteProductImage)
+		}
+	}
+
 
 
 	articleRoutes := r.Group("api")
@@ -93,28 +134,10 @@ func main() {
 		// Protected routes (require JWT authentication)
 		protected := articleRoutes.Group("", middleware.AuthorizeJWT(jwtService))
 		{
-
-			protected.GET("/all-users", userController.GetAllUser)
-
 			protected.POST("/articles", articleController.CreateArticle)
 			protected.PUT("/articles/:id", articleController.UpdateArticle)
 			protected.DELETE("/articles/:id", articleController.DeleteArticle)
 			protected.POST("/upload", utils.UploadImage)
-
-
-			// Store
-			protected.POST("/store", storeController.CreateStore)
-			protected.PUT("/store/:id", storeController.UpdateStore)
-
-
-			// Product (dashboard)
-			protected.POST("/product", productController.CreateProduct)
-			protected.GET("/product/detail/:slug", productController.GetProductBySlug)
-			protected.GET("/product/store/:id", productController.GetProductsByStoreID)
-			protected.PUT("/product/:slug", productController.UpdateProduct)
-			protected.DELETE("/product/:slug", productController.DeleteProduct)
-			protected.POST("/product/image", productController.AddProductImage)
-			protected.DELETE("/product/image/:id", productController.DeleteProductImage)
 		}
 	}
 

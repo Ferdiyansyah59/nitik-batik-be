@@ -15,9 +15,10 @@ import (
 )
 
 type ProductController interface {
+	GetProductsByStoreID(c *gin.Context)
+	GetProductsByStoreIDPublic(c *gin.Context)
 	CreateProduct(c *gin.Context)
 	GetProductBySlug(c *gin.Context)
-	GetProductsByStoreID(c *gin.Context)
 	UpdateProduct(c *gin.Context)
 	DeleteProduct(c *gin.Context)
 	AddProductImage(c *gin.Context)
@@ -38,6 +39,127 @@ func NewProductController(productService service.ProductService, storeService se
 		jwtService:     jwtService,
 		authService:    authService,
 	}
+}
+
+func (ctrl *productController) GetProductsByStoreID(c *gin.Context) {
+	// Fix parameter name - gunakan "id" sesuai routing
+	storeIDParam := c.Param("id")
+	storeID, err := strconv.Atoi(storeIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, helper.BuildResponse(false, "ID toko tidak valid", nil))
+		return
+	}
+	
+	// Dapatkan token dari header untuk validasi ownership
+	authHeader := c.GetHeader("Authorization")
+	
+	// Dapatkan user ID dari token
+	userID, err := ctrl.getUserFromToken(authHeader)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, helper.BuildResponse(false, "User tidak terautentikasi: "+err.Error(), nil))
+		return
+	}
+	
+	// Validasi kepemilikan toko
+	store, err := ctrl.storeService.GetStoreByID(strconv.Itoa(storeID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, helper.BuildResponse(false, "Toko tidak ditemukan", nil))
+		return
+	}
+	
+	if strconv.Itoa(store.UserID) != userID {
+		c.JSON(http.StatusForbidden, helper.BuildResponse(false, "Anda tidak memiliki akses ke toko ini", nil))
+		return
+	}
+	
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "12"))
+	search := c.Query("search")
+	
+	// Ambil produk dengan pagination
+	products, pagination, err := ctrl.productService.GetAllProductByStore(storeID, page, limit, search)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, helper.BuildResponse(false, "Gagal mendapatkan produk", nil))
+		return
+	}
+	
+	// Konversi entity ke DTO response
+	var productResponses []dto.ProductCardResponse
+	for _, product := range products {
+		productResponses = append(productResponses, dto.ProductCardResponse{
+			ID:          product.ID,
+			Slug:        product.Slug,
+			Name:        product.Name,
+			Description: product.Description, // Tambahkan description untuk owner
+			Harga:       product.Harga,
+			StoreID:     product.StoreID,
+			Thumbnail:   product.Thumbnail,
+			CreatedAt:   product.CreatedAt,
+		})
+	}
+	
+	// Return response dengan pagination dan store info
+	data := map[string]interface{}{
+		"store":      store,
+		"products":   productResponses,
+		"pagination": pagination,
+	}
+	
+	c.JSON(http.StatusOK, helper.BuildResponse(true, "Daftar produk toko berhasil diambil", data))
+}
+
+// GetProductsByStoreIDPublic - Untuk public access (tanpa auth)
+func (ctrl *productController) GetProductsByStoreIDPublic(c *gin.Context) {
+	storeIDParam := c.Param("id")
+	storeID, err := strconv.Atoi(storeIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, helper.BuildResponse(false, "ID toko tidak valid", nil))
+		return
+	}
+	
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "12"))
+	search := c.Query("search")
+	
+	// Ambil produk dengan pagination
+	products, pagination, err := ctrl.productService.GetAllProductByStore(storeID, page, limit, search)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, helper.BuildResponse(false, "Gagal mendapatkan produk", nil))
+		return
+	}
+	
+	// Konversi entity ke DTO response (tanpa description untuk public)
+	var productResponses []dto.ProductCardResponse
+	for _, product := range products {
+		productResponses = append(productResponses, dto.ProductCardResponse{
+			ID:        product.ID,
+			Slug:      product.Slug,
+			Name:      product.Name,
+			Harga:     product.Harga,
+			StoreID:   product.StoreID,
+			Thumbnail: product.Thumbnail,
+			CreatedAt: product.CreatedAt,
+		})
+	}
+	
+	// Get store info untuk public
+	store, _ := ctrl.storeService.GetStoreByID(strconv.Itoa(storeID))
+	
+	data := map[string]interface{}{
+		"store": map[string]interface{}{
+			"id":          store.ID,
+			"name":        store.Name,
+			"description": store.Description,
+			"avatar":      store.Avatar,
+			"banner":      store.Banner,
+		},
+		"products":   productResponses,
+		"pagination": pagination,
+	}
+	
+	c.JSON(http.StatusOK, helper.BuildResponse(true, "Katalog produk toko", data))
 }
 
 // getClaimsFromToken adalah helper untuk mendapatkan semua informasi dari token
@@ -148,6 +270,7 @@ func (ctrl *productController) CreateProduct(c *gin.Context) {
 		Description: product.Description,
 		Harga:       product.Harga,
 		StoreID:     product.StoreID,
+		CategoryID:  product.CategoryID,
 		Thumbnail:   product.Thumbnail,
 		Images:      images,
 		CreatedAt:   product.CreatedAt,
@@ -193,38 +316,6 @@ func (ctrl *productController) GetProductBySlug(c *gin.Context) {
 	c.JSON(http.StatusOK, helper.BuildResponse(true, "Produk ditemukan", response))
 }
 
-func (ctrl *productController) GetProductsByStoreID(c *gin.Context) {
-	// Dapatkan store ID dari parameter URL
-	storeIDParam := c.Param("storeId")
-	storeID, err := strconv.Atoi(storeIDParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, helper.BuildResponse(false, "ID toko tidak valid", nil))
-		return
-	}
-	
-	// Ambil semua produk di toko
-	products, err := ctrl.productService.GetProductsByStoreID(storeID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, helper.BuildResponse(false, "Gagal mendapatkan produk", nil))
-		return
-	}
-	
-	// Konversi entity ke DTO response (card response tanpa gambar tambahan)
-	var productResponses []dto.ProductCardResponse
-	for _, product := range products {
-		productResponses = append(productResponses, dto.ProductCardResponse{
-			ID:          product.ID,
-			Slug:        product.Slug,
-			Name:        product.Name,
-			Harga:       product.Harga,
-			StoreID:     product.StoreID,
-			Thumbnail:   product.Thumbnail,
-			CreatedAt:   product.CreatedAt,
-		})
-	}
-	
-	c.JSON(http.StatusOK, helper.BuildResponse(true, "Daftar produk", productResponses))
-}
 
 func (ctrl *productController) UpdateProduct(c *gin.Context) {
 	// Dapatkan slug dari parameter URL

@@ -20,6 +20,8 @@ type StoreController interface {
 	// GetStoreByID(c *gin.Context)
 	// GetStoreByUserID(c *gin.Context)
 	UpdateStore(c *gin.Context)
+	GetStoreByUserID(c *gin.Context)
+	GetAllStores(c *gin.Context)
 	// DeleteStore(c *gin.Context)
 	// GetAllStores(c *gin.Context)
 	// UploadStoreImage(c *gin.Context) 
@@ -69,6 +71,72 @@ func (c *storeController) getClaimsFromToken(authHeader string) (jwt.MapClaims, 
 	
 	return claims, nil
 }
+
+
+// GetStoreByUserID handles request to get a store by UserID
+func (c *storeController) GetStoreByUserID(ctx *gin.Context) {
+	// Get userID from path parameter
+	userIDParam := ctx.Param("user_id")
+	
+	// Convert string to int
+	userID, err := strconv.Atoi(userIDParam)
+	if err != nil {
+		response := helper.BuildErrorResponse("Invalid user ID format", err.Error(), nil)
+		ctx.JSON(http.StatusBadRequest, response)
+		return
+	}
+	
+	// Get store from service
+	store, err := c.storeService.GetStoreByUserID(userID)
+	if err != nil {
+		response := helper.BuildErrorResponse("Store not found", err.Error(), nil)
+		ctx.JSON(http.StatusNotFound, response)
+		return
+	}
+	
+	// Return response
+	response := helper.BuildResponse(true, "Store fetched successfully", store)
+	ctx.JSON(http.StatusOK, response)
+}
+
+// GetAllStores handles request to get all stores (optional: with user_id filter)
+func (c *storeController) GetAllStores(ctx *gin.Context) {
+	// Check if there's a user_id query parameter
+	userIDParam := ctx.Query("user_id")
+	
+	if userIDParam != "" {
+		// If user_id is provided, get store by user ID
+		userID, err := strconv.Atoi(userIDParam)
+		if err != nil {
+			response := helper.BuildErrorResponse("Invalid user ID format", err.Error(), nil)
+			ctx.JSON(http.StatusBadRequest, response)
+			return
+		}
+		
+		store, err := c.storeService.GetStoreByUserID(userID)
+		if err != nil {
+			response := helper.BuildErrorResponse("Store not found", err.Error(), nil)
+			ctx.JSON(http.StatusNotFound, response)
+			return
+		}
+		
+		response := helper.BuildResponse(true, "Store fetched successfully", store)
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+	
+	// If no user_id, get all stores (you can implement pagination here if needed)
+	stores, err := c.storeService.GetAllStores()
+	if err != nil {
+		response := helper.BuildErrorResponse("Failed to fetch stores", err.Error(), nil)
+		ctx.JSON(http.StatusBadRequest, response)
+		return
+	}
+	
+	response := helper.BuildResponse(true, "Stores fetched successfully", stores)
+	ctx.JSON(http.StatusOK, response)
+}
+
 
 // CreateStore dengan logging yang lebih detail
 func (c *storeController) CreateStore(ctx *gin.Context) {

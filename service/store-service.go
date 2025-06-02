@@ -17,7 +17,8 @@ type StoreService interface {
 	CreateStore(storeDTO dto.StoreDTO) (entity.Store, error)
 	Update(c *gin.Context, storeID string, userID string, storeDTO dto.UpdateStoreDTO) (entity.Store, error)
 	GetStoreByID(id string) (entity.Store, error)
-	
+	GetStoreByUserID(userID int) (entity.Store, error) 
+	GetAllStores() ([]entity.Store, error)             
 }
 
 // storeService is the implementation of StoreService interface
@@ -30,6 +31,16 @@ func NewStoreService(repo repository.StoreRepository) StoreService {
 	return &storeService{
 		storeRepository: repo,
 	}
+}
+
+
+func (s *storeService) GetStoreByUserID(userID int) (entity.Store, error) {
+	return s.storeRepository.FindByUserID(userID)
+}
+
+// GetAllStores retrieves all stores
+func (s *storeService) GetAllStores() ([]entity.Store, error) {
+	return s.storeRepository.FindAll()
 }
 
 // CreateStore transforms DTO to entity and creates a new store

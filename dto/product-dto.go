@@ -8,6 +8,7 @@ type CreateProductDTO struct {
 	Description string  `form:"description" binding:"required"`
 	Harga       float64 `form:"harga" binding:"required,gt=0"`
 	StoreID     int     `form:"store_id" binding:"required"`
+	CategoryID  int		`form:"category_id" binding:"required"`
 }
 
 type UpdateProductDTO struct {
@@ -28,6 +29,7 @@ type ProductResponse struct {
 	Description string            `json:"description"`
 	Harga       float64           `json:"harga"`
 	StoreID     int               `json:"store_id"`
+	CategoryID  int				  `json:"category_id"`
 	Thumbnail   string            `json:"thumbnail"`
 	Images      []ProductImageDTO `json:"images"`
 	CreatedAt   time.Time         `json:"created_at"`
