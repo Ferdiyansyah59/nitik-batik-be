@@ -307,6 +307,7 @@ func (ctrl *productController) GetProductBySlug(c *gin.Context) {
 		Description: product.Description,
 		Harga:       product.Harga,
 		StoreID:     product.StoreID,
+		CategoryID:  product.CategoryID,
 		Thumbnail:   product.Thumbnail,
 		Images:      images,
 		CreatedAt:   product.CreatedAt,
