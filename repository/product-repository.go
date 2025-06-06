@@ -18,6 +18,7 @@ type ProductRepository interface {
 	GetAllPublicProduct(page, limit int) ([]entity.ProductCard, int64, error)
 	GetLatestProduct()([]entity.ProductCard, error)
 	GetDetailProduct(slug string)(entity.ProductCard, error)
+	GetAllPublicProductByCategory(slug string, page, limit int) ([]entity.ProductCard, int64, error)
 }
 
 type productRepository struct {
@@ -163,5 +164,38 @@ func (r *productRepository) GetDetailProduct(slug string)(entity.ProductCard, er
 		}
 
 		return product, nil
+}
+
+func (r *productRepository) GetAllPublicProductByCategory(slug string, page, limit int) ([]entity.ProductCard, int64, error) {
+	var products []entity.ProductCard
+	var total int64
+
+	err := r.db.Debug().Model(&entity.ProductCard{}).
+		Joins("JOIN stores ON stores.id = products.store_id").
+		Joins("JOIN category_catalog ON category_catalog.id = products.category_id").
+		Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	err = r.db.Debug().Model(&entity.ProductCard{}).
+		Select("products.*, stores.name AS StoreName, category_catalog.category_name AS CategoryName, category_catalog.slug AS CategorySlug").
+		Joins("JOIN stores ON stores.id = products.store_id").
+		Joins("JOIN category_catalog ON category_catalog.id = products.category_id").
+		// Preload("Images").
+		Order("RAND()").
+		Offset(offset).
+		Where("category_catalog.slug = ?", slug).
+		Limit(limit).
+		Find(&products).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []entity.ProductCard{}, 0, nil // Kembalikan slice kosong jika tidak ada data
+		}
+		return nil, 0, err
+	}
+	return products, total, nil
 }
 

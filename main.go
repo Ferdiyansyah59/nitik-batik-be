@@ -112,6 +112,7 @@ func main() {
 		productRoutes.GET("/latest-products", productController.GetLatestProduct)
 		productRoutes.GET("/store/:id/products", productController.GetProductsByStoreIDPublic)
 		productRoutes.GET("/product/:slug", productController.GetDetailProduct)
+		productRoutes.GET("/products/category/:slug", productController.GetAllPublicProductByCategory)
 
 		protected := productRoutes.Group("", middleware.AuthorizeJWT(jwtService))
 		{

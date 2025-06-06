@@ -25,6 +25,7 @@ type ProductService interface {
 	GetAllPublicProduct(page, limit int) ([]dto.PublicProductCard, *utils.Pagination, error)
 	GetLatestProduct()([]entity.ProductCard, error)
 	GetDetailProduct(slug string)(entity.ProductCard, error)
+	GetAllPublicProductByCategory(slug string, page, limit int) ([]dto.PublicProductCard, *utils.Pagination, error)
 }
 
 type productService struct {
@@ -357,4 +358,38 @@ func (s *productService) GetLatestProduct()([]entity.ProductCard, error) {
 func (s *productService) GetDetailProduct(slug string)(entity.ProductCard, error) {
 	res, err := s.productRepo.GetDetailProduct(slug)
 	return res, err
+}
+
+func (s *productService) GetAllPublicProductByCategory(slug string, page, limit int) ([]dto.PublicProductCard, *utils.Pagination, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 40 // Batas default, bisa disesuaikan
+	}
+
+	products, total, err := s.productRepo.GetAllPublicProductByCategory(slug, page, limit)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gagal mendapatkan semua produk dengan detail lengkap: %w", err)
+	}
+
+	var publicProductCard []dto.PublicProductCard
+	for _, p := range products {
+		publicProductCard = append(publicProductCard, dto.PublicProductCard{
+			ID:            p.ID,
+			Slug:          p.Slug,
+			Name:          p.Name,
+			Harga:         p.Harga,
+			StoreID:       p.StoreID,
+			StoreName:     p.StoreName,   
+			CategoryID:    p.CategoryID,
+			CategoryName:  p.CategoryName,
+			CategorySlug:  p.CategorySlug,
+			Thumbnail:     p.Thumbnail,
+			CreatedAt:     p.CreatedAt,
+		})
+	}
+
+	pagination := utils.NewPagination(page, limit, total)
+	return publicProductCard, pagination, nil
 }

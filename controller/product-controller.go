@@ -26,6 +26,7 @@ type ProductController interface {
 	GetAllPublicProduct(c *gin.Context)
 	GetLatestProduct(c *gin.Context)
 	GetDetailProduct(c *gin.Context)
+	GetAllPublicProductByCategory(c *gin.Context)
 }
 
 type productController struct {
@@ -599,4 +600,37 @@ func (ctrl *productController) GetDetailProduct(c *gin.Context) {
 
 	res := helper.BuildResponse(true, "Berhasil menampilkan data", products)
 	c.JSON(http.StatusOK, res)
+}
+
+func (ctrl *productController) GetAllPublicProductByCategory(c *gin.Context) {
+	slug := c.Param("slug")
+	page, errPage := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if errPage != nil || page < 1 {
+		page = 1
+	}
+	limit, errLimit := strconv.Atoi(c.DefaultQuery("limit", "40"))
+	if errLimit != nil || limit < 1 {
+		limit = 40 // Batas default
+	}
+
+	products, pagination, err := ctrl.productService.GetAllPublicProductByCategory(slug, page, limit)
+	if err != nil {
+		response := helper.BuildErrorResponse("Gagal mengambil produk dengan detail", err.Error(), nil)
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+    
+    data := map[string]interface{}{
+		"products":   products,
+		"pagination": pagination,
+	}
+
+	if len(products) == 0 {
+		response := helper.BuildResponse(true, "Tidak ada produk yang ditemukan", data)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+
+	response := helper.BuildResponse(true, "Produk dengan detail berhasil diambil", data)
+	c.JSON(http.StatusOK, response)
 }
