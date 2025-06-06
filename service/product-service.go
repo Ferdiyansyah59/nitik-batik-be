@@ -22,6 +22,9 @@ type ProductService interface {
 	DeleteProduct(slug string) error
 	AddProductImage(c *gin.Context, slug string, file *multipart.FileHeader) (entity.ProductImage, error)
 	DeleteProductImage(slug string, imageID int) error
+	GetAllPublicProduct(page, limit int) ([]dto.PublicProductCard, *utils.Pagination, error)
+	GetLatestProduct()([]entity.ProductCard, error)
+	GetDetailProduct(slug string)(entity.ProductCard, error)
 }
 
 type productService struct {
@@ -310,4 +313,48 @@ func (s *productService) DeleteProductImage(slug string, imageID int) error {
 	
 	// Hapus gambar dari database
 	return s.productImageRepo.Delete(imageID)
+}
+
+func (s *productService) GetAllPublicProduct(page, limit int) ([]dto.PublicProductCard, *utils.Pagination, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 40 // Batas default, bisa disesuaikan
+	}
+
+	products, total, err := s.productRepo.GetAllPublicProduct(page, limit)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gagal mendapatkan semua produk dengan detail lengkap: %w", err)
+	}
+
+	var publicProductCard []dto.PublicProductCard
+	for _, p := range products {
+		publicProductCard = append(publicProductCard, dto.PublicProductCard{
+			ID:            p.ID,
+			Slug:          p.Slug,
+			Name:          p.Name,
+			Harga:         p.Harga,
+			StoreID:       p.StoreID,
+			StoreName:     p.StoreName,   
+			CategoryID:    p.CategoryID,
+			CategoryName:  p.CategoryName,
+			CategorySlug:  p.CategorySlug,
+			Thumbnail:     p.Thumbnail,
+			CreatedAt:     p.CreatedAt,
+		})
+	}
+
+	pagination := utils.NewPagination(page, limit, total)
+	return publicProductCard, pagination, nil
+}
+
+func (s *productService) GetLatestProduct()([]entity.ProductCard, error) {
+	res, err := s.productRepo.GetLatestProduct()
+	return res, err
+}
+
+func (s *productService) GetDetailProduct(slug string)(entity.ProductCard, error) {
+	res, err := s.productRepo.GetDetailProduct(slug)
+	return res, err
 }

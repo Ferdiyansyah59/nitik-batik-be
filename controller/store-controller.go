@@ -17,7 +17,7 @@ import (
 // StoreController interface represents the store controller contract
 type StoreController interface {
 	CreateStore(c *gin.Context)
-	// GetStoreByID(c *gin.Context)
+	GetStoreByID(c *gin.Context)
 	// GetStoreByUserID(c *gin.Context)
 	UpdateStore(c *gin.Context)
 	GetStoreByUserID(c *gin.Context)
@@ -266,27 +266,27 @@ func (c *storeController) UpdateStore(ctx *gin.Context) {
 
 
 // // GetStoreByID handles request to get a store by ID
-// func (c *storeController) GetStoreByID(ctx *gin.Context) {
-// 	// Parse store ID
-// 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-// 	if err != nil {
-// 		response := helper.BuildErrorResponse("Invalid ID format", err.Error(), nil)
-// 		ctx.JSON(http.StatusBadRequest, response)
-// 		return
-// 	}
+func (c *storeController) GetStoreByID(ctx *gin.Context) {
+	// Parse store ID
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response := helper.BuildErrorResponse("Invalid ID format", err.Error(), nil)
+		ctx.JSON(http.StatusBadRequest, response)
+		return
+	}
 	
-// 	// Get store from service
-// 	store, err := c.storeService.GetStoreByID(id)
-// 	if err != nil {
-// 		response := helper.BuildErrorResponse("Store not found", err.Error(), nil)
-// 		ctx.JSON(http.StatusNotFound, response)
-// 		return
-// 	}
+	// Get store from service
+	store, err := c.storeService.GetStoreByID(strconv.FormatUint(id, 10))
+	if err != nil {
+		response := helper.BuildErrorResponse("Store not found", err.Error(), nil)
+		ctx.JSON(http.StatusNotFound, response)
+		return
+	}
 	
-// 	// Return response
-// 	response := helper.BuildResponse(true, "Store fetched successfully", store)
-// 	ctx.JSON(http.StatusOK, response)
-// }
+	// Return response
+	response := helper.BuildResponse(true, "Store fetched successfully", store)
+	ctx.JSON(http.StatusOK, response)
+}
 
 // // GetStoreByUserID handles request to get a store by UserID
 // func (c *storeController) GetStoreByUserID(ctx *gin.Context) {

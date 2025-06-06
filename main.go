@@ -21,6 +21,7 @@ var (
 	storeRepository repository.StoreRepository = repository.NewStoreRepository(db)
 	productRepository repository.ProductRepository = repository.NewProductRepository(db)
 	productImageRepository repository.ProductImageRepository = repository.NewProductImageRepository(db)
+	productCategoryRepository repository.ProductCategoryRepository = repository.NewProductCategoryRepository(db)
 
 	// Service
 	jwtService     service.JWTService     = service.NewJWTService()
@@ -29,6 +30,7 @@ var (
 	articleService service.ArticleService = service.NewArticleService(articleRepository)
 	storeService service.StoreService = service.NewStoreService(storeRepository)
 	productService service.ProductService = service.NewProductService(productRepository, productImageRepository)
+	productCategoryService service.ProductCategoryService = service.NewProductCategoryService(productCategoryRepository)
 
 	// Controller
 	userController    controller.UserController    = controller.NewUserController(userService, jwtService)
@@ -36,6 +38,7 @@ var (
 	articleController controller.ArticleController = controller.NewArticleController(articleService, jwtService)
 	storeController controller.StoreController = controller.NewStoreController(storeService, jwtService, authService)
 	productController controller.ProductController = controller.NewProductController(productService, storeService, jwtService, authService)
+	productCategoryController controller.ProductCategoryController = controller.NewProductCategoryController(productCategoryService)
 
 )
 
@@ -98,14 +101,17 @@ func main() {
 			// Store
 			protected.POST("/store", storeController.CreateStore)
 			protected.PUT("/store/:id", storeController.UpdateStore)
+			protected.GET("/store/:id", storeController.GetStoreByID)
 		}
 	}
 
 	productRoutes := r.Group("api") 
 	{
 				// Product
+		productRoutes.GET("/products", productController.GetAllPublicProduct) 
+		productRoutes.GET("/latest-products", productController.GetLatestProduct)
 		productRoutes.GET("/store/:id/products", productController.GetProductsByStoreIDPublic)
-		productRoutes.GET("/product/:slug", productController.GetProductBySlug)
+		productRoutes.GET("/product/:slug", productController.GetDetailProduct)
 
 		protected := productRoutes.Group("", middleware.AuthorizeJWT(jwtService))
 		{
@@ -118,6 +124,11 @@ func main() {
 			protected.POST("/product/image", productController.AddProductImage)
 			protected.DELETE("/product/image/:id", productController.DeleteProductImage)
 		}
+	}
+
+	productCategory := r.Group("api")
+	{
+		productCategory.GET("/product-category", productCategoryController.GetProductCategory)
 	}
 
 

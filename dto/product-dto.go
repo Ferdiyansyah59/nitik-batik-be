@@ -47,3 +47,18 @@ type ProductCardResponse struct {
 	Thumbnail   string    `json:"thumbnail"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+type PublicProductCard struct {
+	ID           int       `json:"id"`
+	Slug         string    `json:"slug"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description,omitempty"`
+	Harga        float64   `json:"harga"`
+	StoreID      int       `json:"store_id"`
+	StoreName    string    `json:"store_name,omitempty"` 
+	CategoryID   int       `json:"category_id,omitempty"`
+	CategoryName string    `json:"category_name,omitempty"`
+	CategorySlug string    `json:"category_slug,omitempty"`
+	Thumbnail    string    `json:"thumbnail"`
+	CreatedAt    time.Time `json:"created_at"`
+}

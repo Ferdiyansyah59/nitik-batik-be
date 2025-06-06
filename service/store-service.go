@@ -6,6 +6,7 @@ import (
 	"batik/repository"
 	"batik/utils"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -87,58 +88,90 @@ func (s *storeService) Update(c *gin.Context, storeID string, userID string, sto
 		store.Alamat = storeDTO.Alamat
 	}
 
+	// ✅ PERBAIKAN: Tambah logging dan debugging untuk file upload
+	log.Printf("🔍 Checking for avatar file...")
+	
 	// Proses avatar jika ada
 	avatarFile, err := c.FormFile("avatar")
-	if err == nil {
+	if err != nil {
+		log.Printf("ℹ️ No avatar file found or error: %v", err)
+	} else {
+		log.Printf("✅ Avatar file found: %s, Size: %d bytes", avatarFile.Filename, avatarFile.Size)
+		
 		// Validasi file
 		if err := utils.FileValidator(avatarFile, 5*1024*1024); err != nil {
+			log.Printf("❌ Avatar validation failed: %v", err)
 			return entity.Store{}, fmt.Errorf("validasi avatar gagal: %v", err)
 		}
 
 		// Hapus avatar lama jika ada
 		if store.Avatar != "" {
+			log.Printf("🗑️ Deleting old avatar: %s", store.Avatar)
 			utils.DeleteFileIfExists(store.Avatar)
 		}
 
 		// Upload avatar baru
+		log.Printf("📤 Uploading new avatar...")
 		avatarPath, err := utils.UploadFile(c, avatarFile, "uploads/store-avatar")
 		if err != nil {
+			log.Printf("❌ Avatar upload failed: %v", err)
 			return entity.Store{}, fmt.Errorf("gagal upload avatar: %v", err)
 		}
 
+		log.Printf("✅ Avatar uploaded successfully: %s", avatarPath)
 		store.Avatar = avatarPath
 	}
 
+	// ✅ PERBAIKAN: Tambah logging untuk banner
+	log.Printf("🔍 Checking for banner file...")
+	
 	// Proses banner jika ada
 	bannerFile, err := c.FormFile("banner")
-	if err == nil {
+	if err != nil {
+		log.Printf("ℹ️ No banner file found or error: %v", err)
+	} else {
+		log.Printf("✅ Banner file found: %s, Size: %d bytes", bannerFile.Filename, bannerFile.Size)
+		
 		// Validasi file
 		if err := utils.FileValidator(bannerFile, 5*1024*1024); err != nil {
+			log.Printf("❌ Banner validation failed: %v", err)
 			return entity.Store{}, fmt.Errorf("validasi banner gagal: %v", err)
 		}
 
 		// Hapus banner lama jika ada
 		if store.Banner != "" {
+			log.Printf("🗑️ Deleting old banner: %s", store.Banner)
 			utils.DeleteFileIfExists(store.Banner)
 		}
 
 		// Upload banner baru
+		log.Printf("📤 Uploading new banner...")
 		bannerPath, err := utils.UploadFile(c, bannerFile, "uploads/store-banner")
 		if err != nil {
+			log.Printf("❌ Banner upload failed: %v", err)
 			return entity.Store{}, fmt.Errorf("gagal upload banner: %v", err)
 		}
 
+		log.Printf("✅ Banner uploaded successfully: %s", bannerPath)
 		store.Banner = bannerPath
 	}
 
 	// Update timestamp
 	store.UpdatedAt = time.Now()
 
+	// ✅ PERBAIKAN: Log sebelum menyimpan ke database
+	log.Printf("💾 Saving store to database...")
+	log.Printf("Store data before save: Avatar=%s, Banner=%s", store.Avatar, store.Banner)
+
 	// Simpan ke database
 	updatedStore, err := s.storeRepository.Update(store)
 	if err != nil {
+		log.Printf("❌ Database save failed: %v", err)
 		return entity.Store{}, fmt.Errorf("gagal menyimpan data toko: %v", err)
 	}
+
+	log.Printf("✅ Store updated successfully in database")
+	log.Printf("Updated store data: Avatar=%s, Banner=%s", updatedStore.Avatar, updatedStore.Banner)
 
 	return updatedStore, nil
 }

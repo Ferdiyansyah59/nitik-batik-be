@@ -23,6 +23,9 @@ type ProductController interface {
 	DeleteProduct(c *gin.Context)
 	AddProductImage(c *gin.Context)
 	DeleteProductImage(c *gin.Context)
+	GetAllPublicProduct(c *gin.Context)
+	GetLatestProduct(c *gin.Context)
+	GetDetailProduct(c *gin.Context)
 }
 
 type productController struct {
@@ -539,4 +542,61 @@ func (ctrl *productController) DeleteProductImage(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, helper.BuildResponse(true, "Gambar produk berhasil dihapus", nil))
+}
+
+func (ctrl *productController) GetAllPublicProduct(c *gin.Context) {
+	page, errPage := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if errPage != nil || page < 1 {
+		page = 1
+	}
+	limit, errLimit := strconv.Atoi(c.DefaultQuery("limit", "40"))
+	if errLimit != nil || limit < 1 {
+		limit = 40 // Batas default
+	}
+
+	products, pagination, err := ctrl.productService.GetAllPublicProduct(page, limit)
+	if err != nil {
+		response := helper.BuildErrorResponse("Gagal mengambil produk dengan detail", err.Error(), nil)
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+    
+    data := map[string]interface{}{
+		"products":   products,
+		"pagination": pagination,
+	}
+
+	if len(products) == 0 {
+		response := helper.BuildResponse(true, "Tidak ada produk yang ditemukan", data)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+
+	response := helper.BuildResponse(true, "Produk dengan detail berhasil diambil", data)
+	c.JSON(http.StatusOK, response)
+}
+
+func (ctrl *productController) GetLatestProduct(c *gin.Context) {
+	products, err := ctrl.productService.GetLatestProduct()
+
+	if err != nil {
+		res := helper.BuildErrorResponse("Gagal menampilkan data", err.Error(), nil)
+		c.JSON(http.StatusNotFound, res)
+	}
+
+	res := helper.BuildResponse(true, "Berhasil menampilkan data", products)
+	c.JSON(http.StatusOK, res)
+}
+
+func (ctrl *productController) GetDetailProduct(c *gin.Context) {
+	slug := c.Param("slug")
+	products, err := ctrl.productService.GetDetailProduct(slug)
+
+	if err != nil {
+		res := helper.BuildErrorResponse("Gagal menampilkan data", err.Error(), nil)
+		c.JSON(http.StatusNotFound, res)
+	}
+
+	res := helper.BuildResponse(true, "Berhasil menampilkan data", products)
+	c.JSON(http.StatusOK, res)
 }
