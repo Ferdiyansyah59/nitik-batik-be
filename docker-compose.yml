@@ -13,3 +13,4 @@ services:
       - DB_DATABASE=nitik_batik
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
