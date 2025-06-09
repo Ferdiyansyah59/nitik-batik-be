@@ -10,10 +10,11 @@ import (
 )
 
 func SetupDatabaseConnection() *gorm.DB {
-	errEnv := godotenv.Load()
-	if errEnv != nil {
-		panic("Failed to load env file")
-	}
+	// errEnv := godotenv.Load()
+	// if errEnv != nil {
+	// 	panic("Failed to load env file")
+	// }
+	_ = godotenv.Load()
 
 	dbUser := os.Getenv("DB_USERNAME")
 	dbPw := os.Getenv("DB_PASSWORD")
