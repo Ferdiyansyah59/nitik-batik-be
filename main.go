@@ -81,8 +81,8 @@ func main() {
 
 
 	// Serve static files (images)
-	r.Static("/uploads", "./uploads")
-	
+	// r.Static("/uploads", "./uploads")
+	r.Static("/uploads", "/app/uploads")
 	// Additional specific routes for subdirectories if needed
 	// r.Static("/uploads/images", "./uploads/images")
 	// r.Static("/uploads/product-images", "./uploads/product-images")
