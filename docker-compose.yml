@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "1815:1815"
+    env_file:
+      - .env
     environment:
       - GIN_MODE=release
     volumes:
