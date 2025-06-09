@@ -16,6 +16,12 @@ RUN go mod download && go mod tidy
 # Copy source code
 COPY . .
 
+# Explicitly copy .env to make sure it exists
+COPY .env ./
+
+# Verify .env exists
+RUN ls -la .env
+
 # Build aplikasi
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
