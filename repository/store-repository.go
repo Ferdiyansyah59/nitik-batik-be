@@ -13,6 +13,7 @@ type StoreRepository interface {
     FindByUserID(userID int) (entity.Store, error) 
     FindAll() ([]entity.Store, error)  
     Update(store entity.Store) (entity.Store, error)
+    GetAllStoreData(page, limit int, search string) ([]entity.Store, int64, error)
 }
 
 type storeRepository struct {
@@ -75,4 +76,28 @@ func (r *storeRepository) FindByID(id string) (entity.Store, error) {
 func (r *storeRepository) Update(store entity.Store) (entity.Store, error) {
     err := r.db.Save(&store).Error
     return store, err
+}
+
+func (r *storeRepository) GetAllStoreData(page, limit int, search string) ([]entity.Store, int64, error) {
+    var stores []entity.Store
+    var total int64
+
+    query := r.db.Model(&entity.Store{})
+
+    if search != "" {
+		query = query.Where("name LIKE ?", "%"+search+"%")
+	}
+	
+	// Count total records
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	// Apply pagination
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Order("created_At DESC").Find(&stores).Error; err != nil {
+		return nil, 0, err
+	}
+	
+	return stores, total, nil
 }

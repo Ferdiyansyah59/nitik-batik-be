@@ -22,6 +22,7 @@ type StoreController interface {
 	UpdateStore(c *gin.Context)
 	GetStoreByUserID(c *gin.Context)
 	GetAllStores(c *gin.Context)
+	GetAllStoreData(ctx *gin.Context)
 	// DeleteStore(c *gin.Context)
 	// GetAllStores(c *gin.Context)
 	// UploadStoreImage(c *gin.Context) 
@@ -288,6 +289,30 @@ func (c *storeController) GetStoreByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+
+func (c *storeController) GetAllStoreData(ctx *gin.Context) {
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	search := ctx.Query("search")
+	
+	// Get users from service
+	stores, pagination, err := c.storeService.GetAllStoreData(page, limit, search)
+	if err != nil {
+		response := helper.BuildErrorResponse("Failed to fetch users", err.Error(), nil)
+		ctx.JSON(http.StatusBadRequest, response)
+		return
+	}
+	
+	// Return response - combine users and pagination into a single data object
+	data := map[string]interface{}{
+		"stores":   stores,
+		"pagination": pagination,
+	}
+	response := helper.BuildResponse(true, "Stores fetched successfully", data)
+	ctx.JSON(http.StatusOK, response)
+}
+
 // // GetStoreByUserID handles request to get a store by UserID
 // func (c *storeController) GetStoreByUserID(ctx *gin.Context) {
 // 	// Get userID from path
@@ -445,3 +470,4 @@ func (c *storeController) GetStoreByID(ctx *gin.Context) {
 // func (c *storeController) UploadStoreImage(ctx *gin.Context) {
 // 	// Method stub - akan diimplementasikan sesuai kebutuhan
 // }
+

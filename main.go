@@ -43,20 +43,35 @@ var (
 )
 
 func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+    // Define allowed origins
+    allowedOrigins := []string{
+        "http://localhost:3000",
+        "http://82.112.230.106:1801",
+        "https://nitikbatik.ferdirns.com",
+    }
+    
+    return func(c *gin.Context) {
+        origin := c.Request.Header.Get("Origin")
+        
+        // Check if origin is in allowed list
+        for _, allowedOrigin := range allowedOrigins {
+            if origin == allowedOrigin {
+                c.Header("Access-Control-Allow-Origin", origin)
+                break
+            }
+        }
+        
+        c.Header("Access-Control-Allow-Credentials", "true") // biasanya true kalau specific origins
+        c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+        c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT, DELETE")
 
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Credentials", "false")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT, DELETE")
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(204)
+            return
+        }
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
+        c.Next()
+    }
 }
 
 func main() {
@@ -67,6 +82,16 @@ func main() {
 
 	// Serve static files (images)
 	r.Static("/uploads", "./uploads")
+	
+	// Additional specific routes for subdirectories if needed
+	// r.Static("/uploads/images", "./uploads/images")
+	// r.Static("/uploads/product-images", "./uploads/product-images")
+	// r.Static("/uploads/store-avatar", "./uploads/store-avatar")
+	// r.Static("/uploads/store-banner", "./uploads/store-banner")
+	
+	// // For serving other static assets if needed
+	// r.Static("/assets", "./assets")
+	// r.Static("/public", "./public")
 
 	authRoutes := r.Group("api")
 	{
@@ -99,6 +124,7 @@ func main() {
 		protected := storeAuth.Group("", middleware.AuthorizeJWT(jwtService))
 		{
 			// Store
+			protected.GET("/stores-data", storeController.GetAllStoreData)
 			protected.POST("/store", storeController.CreateStore)
 			protected.PUT("/store/:id", storeController.UpdateStore)
 			protected.GET("/store/:id", storeController.GetStoreByID)
@@ -113,6 +139,7 @@ func main() {
 		productRoutes.GET("/store/:id/products", productController.GetProductsByStoreIDPublic)
 		productRoutes.GET("/product/:slug", productController.GetDetailProduct)
 		productRoutes.GET("/products/category/:slug", productController.GetAllPublicProductByCategory)
+		productRoutes.GET("/products/store/:id", productController.GetPublicProductsByStoreID)
 
 		protected := productRoutes.Group("", middleware.AuthorizeJWT(jwtService))
 		{
@@ -153,5 +180,5 @@ func main() {
 		}
 	}
 
-	r.Run(":8081")
+	r.Run(":1815")
 }

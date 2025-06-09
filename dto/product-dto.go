@@ -15,6 +15,7 @@ type UpdateProductDTO struct {
 	Name        string  `json:"name" form:"name"`
 	Description string  `json:"description" form:"description"`
 	Harga       float64 `json:"harga" form:"harga" binding:"omitempty,gt=0"`
+	CategoryID  int     `json:"category_id" form:"category_id"` 
 }
 
 type ProductImageDTO struct {

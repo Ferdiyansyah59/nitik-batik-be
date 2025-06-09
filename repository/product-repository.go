@@ -15,7 +15,7 @@ type ProductRepository interface {
 	Update(product entity.Product) (entity.Product, error)
 	Delete(id int) error
 	IsSlugExists(slug string) bool
-	GetAllPublicProduct(page, limit int) ([]entity.ProductCard, int64, error)
+	GetAllPublicProduct(page, limit int, search string) ([]entity.ProductCard, int64, error)
 	GetLatestProduct()([]entity.ProductCard, error)
 	GetDetailProduct(slug string)(entity.ProductCard, error)
 	GetAllPublicProductByCategory(slug string, page, limit int) ([]entity.ProductCard, int64, error)
@@ -99,24 +99,36 @@ func (r *productRepository) IsSlugExists(slug string) bool {
 	return count > 0
 }
 
-func (r *productRepository) GetAllPublicProduct(page, limit int) ([]entity.ProductCard, int64, error) {
-	var products []entity.ProductCard
-	var total int64
+func (r *productRepository) GetAllPublicProduct(page, limit int, search string) ([]entity.ProductCard, int64, error) {
+	var (
+		products []entity.ProductCard
+		total    int64
+		err      error
+	)
 
-	err := r.db.Debug().Model(&entity.ProductCard{}).
+	query := r.db.Model(&entity.ProductCard{}).
 		Joins("JOIN stores ON stores.id = products.store_id").
-		Joins("JOIN category_catalog ON category_catalog.id = products.category_id").
-		Count(&total).Error
+		Joins("JOIN category_catalog ON category_catalog.id = products.category_id")
+
+	if search != "" {
+		searchQuery := "%" + search + "%"
+		// Melakukan pencarian pada nama produk, deskripsi, nama toko, dan nama kategori
+		query = query.Where(
+			"products.name LIKE ? OR products.description LIKE ? OR stores.name LIKE ? OR category_catalog.category_name LIKE ?",
+			searchQuery, searchQuery, searchQuery, searchQuery,
+		)
+	}
+
+	// Menghitung total data yang sesuai dengan filter
+	err = query.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * limit
-	err = r.db.Debug().Model(&entity.ProductCard{}).
-		Select("products.*, stores.name AS StoreName, category_catalog.category_name AS CategoryName, category_catalog.slug AS CategorySlug").
-		Joins("JOIN stores ON stores.id = products.store_id").
-		Joins("JOIN category_catalog ON category_catalog.id = products.category_id").
-		// Preload("Images").
+
+	// Mengambil data produk dengan paginasi dan filter yang sudah diterapkan
+	err = query.Select("products.*, stores.name AS StoreName, category_catalog.category_name AS CategoryName, category_catalog.slug AS CategorySlug").
 		Order("RAND()").
 		Offset(offset).
 		Limit(limit).
@@ -124,10 +136,13 @@ func (r *productRepository) GetAllPublicProduct(page, limit int) ([]entity.Produ
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return []entity.ProductCard{}, 0, nil // Kembalikan slice kosong jika tidak ada data
+			// Jika data tidak ditemukan, kembalikan slice kosong tanpa error
+			return []entity.ProductCard{}, total, nil
 		}
+		// Untuk error lainnya, kembalikan error
 		return nil, 0, err
 	}
+
 	return products, total, nil
 }
 

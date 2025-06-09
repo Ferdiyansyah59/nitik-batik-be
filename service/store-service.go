@@ -19,7 +19,8 @@ type StoreService interface {
 	Update(c *gin.Context, storeID string, userID string, storeDTO dto.UpdateStoreDTO) (entity.Store, error)
 	GetStoreByID(id string) (entity.Store, error)
 	GetStoreByUserID(userID int) (entity.Store, error) 
-	GetAllStores() ([]entity.Store, error)             
+	GetAllStores() ([]entity.Store, error)   
+	GetAllStoreData(page, limit int, search string) ([]entity.Store, *utils.Pagination, error)          
 }
 
 // storeService is the implementation of StoreService interface
@@ -182,3 +183,25 @@ func (s *storeService) GetStoreByID(id string) (entity.Store, error) {
 
 	return store, err
 }
+
+
+func (s *storeService) GetAllStoreData(page, limit int, search string) ([]entity.Store, *utils.Pagination, error) {
+	// Ensure valid pagination parameters
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+	
+	// Get users from repository
+	users, total, err := s.storeRepository.GetAllStoreData(page, limit, search)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	// Create pagination data
+	pagination := utils.NewPagination(page, limit, total)
+	
+	return users, pagination, nil
+ }
