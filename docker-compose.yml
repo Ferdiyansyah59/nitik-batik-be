@@ -12,5 +12,7 @@ services:
       - DB_PASSWORD=secret
       - DB_DATABASE=nitik_batik
     volumes:
-      - ./logs:/app/logs
       - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    # Ensure proper permissions
+    user: "1001:1001"

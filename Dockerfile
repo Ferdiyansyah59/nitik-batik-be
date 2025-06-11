@@ -16,12 +16,6 @@ RUN go mod download && go mod tidy
 # Copy source code
 COPY . .
 
-# Explicitly copy .env to make sure it exists
-COPY .env ./
-
-# Verify .env exists
-RUN ls -la .env
-
 # Build aplikasi
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
@@ -31,25 +25,24 @@ FROM alpine:latest
 # Install ca-certificates untuk HTTPS requests
 RUN apk --no-cache add ca-certificates
 
-# Create non-root user
-RUN addgroup -g 1001 -S appgroup && \
+# Create app directory dan user
+RUN mkdir -p /app/uploads/images /app/uploads/product-images /app/uploads/store-avatar /app/uploads/store-banner && \
+    addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-WORKDIR /root/
+WORKDIR /app
 
 # Copy binary dari builder stage
 COPY --from=builder /app/main .
 
-# Copy file konfigurasi jika ada
-# COPY --from=builder /app/config ./config
-
-# Change ownership ke non-root user
-RUN chown -R appuser:appgroup /root/
+# Set permissions untuk uploads directory
+RUN chown -R appuser:appgroup /app && \
+    chmod -R 755 /app/uploads
 
 # Switch ke non-root user
 USER appuser
 
-# Expose port (sesuaikan dengan port aplikasi Gin)
+# Expose port
 EXPOSE 1815
 
 # Command untuk menjalankan aplikasi
